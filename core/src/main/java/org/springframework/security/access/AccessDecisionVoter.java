@@ -36,6 +36,7 @@ public interface AccessDecisionVoter<S> {
 
 	int ACCESS_GRANTED = 1;
 
+	//ABSTAIN：弃权
 	int ACCESS_ABSTAIN = 0;
 
 	int ACCESS_DENIED = -1;

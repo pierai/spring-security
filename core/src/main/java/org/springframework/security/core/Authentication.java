@@ -64,6 +64,7 @@ public interface Authentication extends Principal, Serializable {
 	 * @return the authorities granted to the principal, or an empty collection if the
 	 * token has not been authenticated. Never null.
 	 */
+	//获取用户的权限
 	Collection<? extends GrantedAuthority> getAuthorities();
 
 	/**
@@ -72,6 +73,7 @@ public interface Authentication extends Principal, Serializable {
 	 * are expected to populate the credentials.
 	 * @return the credentials that prove the identity of the <code>Principal</code>
 	 */
+	//获取用户的凭证，一般来说就是密码
 	Object getCredentials();
 
 	/**
@@ -79,6 +81,12 @@ public interface Authentication extends Principal, Serializable {
 	 * address, certificate serial number etc.
 	 * @return additional details about the authentication request, or <code>null</code>
 	 * if not used
+	 */
+	/**
+	 * 存储有关身份验证请求的其他详细信息。
+	 * 这些可能是 IP 地址、证书序列号等。
+	 * @return 有关身份验证请求的其他详细信息，如果未使用，则返回 null
+	 *
 	 */
 	Object getDetails();
 
@@ -93,6 +101,13 @@ public interface Authentication extends Principal, Serializable {
 	 * {@code UserDetails} object as the principal.
 	 * @return the <code>Principal</code> being authenticated or the authenticated
 	 * principal after authentication.
+	 */
+	/**
+	 * 正在验证的主体的身份。如果使用用户名和密码进行身份验证请求，则这将是用户名。调用者需要填充身份验证请求的主体。
+	 *
+	 * <tt>AuthenticationManager</tt> 实现通常会返回一个 <tt>Authentication</tt>，其中包含更丰富的信息作为应用程序使用的主体(principal)。
+	 * 许多身份验证提供程序将创建一个 {@code UserDetails} 对象作为主体。
+	 * @return 正在验证的 <code>Principal</code> 或验证后的主体。
 	 */
 	Object getPrincipal();
 
@@ -114,6 +129,7 @@ public interface Authentication extends Principal, Serializable {
 	 * <code>AbstractSecurityInterceptor</code> does not need to present the token to the
 	 * <code>AuthenticationManager</code> again for re-authentication.
 	 */
+	//当前用户是否认证成功
 	boolean isAuthenticated();
 
 	/**

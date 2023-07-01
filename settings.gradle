@@ -1,5 +1,8 @@
 pluginManagement {
 	repositories {
+		maven {
+			url 'https://maven.aliyun.com/repository/gradle-plugin'
+		}
 		gradlePluginPortal()
 	}
 }
@@ -11,8 +14,11 @@ plugins {
 
 dependencyResolutionManagement {
 	repositories {
+		maven { url 'https://maven.aliyun.com/repository/public/' }
+		maven { url 'https://plugins.gradle.org/m2/' }
 		mavenCentral()
 	}
+
 }
 
 rootProject.name = 'spring-security'
@@ -22,7 +28,7 @@ FileTree buildFiles = fileTree(rootDir) {
 	include '**/*.gradle', '**/*.gradle.kts'
 	exclude 'build', '**/gradle', 'settings.gradle', 'buildSrc', '/build.gradle', '.*', 'out'
 	exclude '**/grails3'
-	if(excludes) {
+	if (excludes) {
 		exclude excludes
 	}
 }
@@ -32,7 +38,7 @@ buildFiles.each { File buildFile ->
 
 	boolean isDefaultName = 'build.gradle'.equals(buildFile.name)
 	boolean isKotlin = buildFile.name.endsWith(".kts")
-	if(isDefaultName) {
+	if (isDefaultName) {
 		String buildFilePath = buildFile.parentFile.absolutePath
 		String projectPath = buildFilePath.replace(rootDirPath, '').replace(File.separator, ':')
 		include projectPath
@@ -41,7 +47,7 @@ buildFiles.each { File buildFile ->
 		if (isKotlin) {
 			projectName = buildFile.name.replace('.gradle.kts', '')
 		} else {
-		 	projectName = buildFile.name.replace('.gradle', '')
+			projectName = buildFile.name.replace('.gradle', '')
 		}
 		String projectPath = ':' + projectName;
 		include projectPath

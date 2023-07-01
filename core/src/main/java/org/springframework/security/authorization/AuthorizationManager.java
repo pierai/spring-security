@@ -38,6 +38,7 @@ public interface AuthorizationManager<T> {
 	 * @param object the {@link T} object to check
 	 * @throws AccessDeniedException if access is not granted
 	 */
+	//确定是否应授予特定身份验证和对象的访问权限
 	default void verify(Supplier<Authentication> authentication, T object) {
 		AuthorizationDecision decision = check(authentication, object);
 		if (decision != null && !decision.isGranted()) {
