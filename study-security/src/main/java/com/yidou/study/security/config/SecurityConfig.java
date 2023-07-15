@@ -23,6 +23,8 @@ public class SecurityConfig {
 	@Bean
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http.authorizeRequests()
+				// 放行获取验证码接口
+				.requestMatchers("/vc.jpg").permitAll()
 				.anyRequest().authenticated()
 				//表单登录配置项
 				.and()
@@ -67,9 +69,9 @@ public class SecurityConfig {
 	@Bean
 	AuthenticationManager authenticationManager() {
 		//指定认证方式：DaoAuthenticationProvider表示用户名/密码认证
-		DaoAuthenticationProvider ap1 = new DaoAuthenticationProvider();
+		DaoAuthenticationProvider ap1 = new KaptchaAuthenticationProvider();
 		ap1.setUserDetailsService(uds1());
-		DaoAuthenticationProvider ap2 = new DaoAuthenticationProvider();
+		DaoAuthenticationProvider ap2 = new KaptchaAuthenticationProvider();
 		ap2.setUserDetailsService(uds2());
 		return new ProviderManager(ap1, ap2);
 	}
