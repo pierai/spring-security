@@ -223,25 +223,39 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 
 	private void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
+		//判断当前请求是不是登录认证请求，如果是认证请求，就执行接下来的认证代码；如果不是认证请求，则直接继续走剩余的过滤器即可。
 		if (!requiresAuthentication(request, response)) {
 			chain.doFilter(request, response);
 			return;
 		}
 		try {
+			// attemptAuthentication方法是一个抽象方法，具体实现在它的子类UsernamePassword AuthenticationFilter中。
 			Authentication authenticationResult = attemptAuthentication(request, response);
 			if (authenticationResult == null) {
 				// return immediately as subclass has indicated that it hasn't completed
 				return;
 			}
+			// 认证成功后，通过sessionStrategy.onAuthentication方法来处理session并发问题。
 			this.sessionStrategy.onAuthentication(authenticationResult, request, response);
 			// Authentication success
+			// 用来判断请求是否还需要继续向下走。默认情况下该参数的值为false，即认证成功后，后续的过滤器将不再执行了。
 			if (this.continueChainBeforeSuccessfulAuthentication) {
 				chain.doFilter(request, response);
 			}
+			/**
+			 * 主要做了四件事：
+			 * ①向SecurityContextHolder中存入用户信息；
+			 * ②处理Cookie；
+			 * ③发布认证成功事件，这个事件类型是InteractiveAuthenticationSuccessEvent，表示通过一些自动交互的方式认证成功，
+			 * 		例如通过RememberMe的方式登录；
+			 * ④调用认证成功的回调方法。
+ 			 */
+
 			successfulAuthentication(request, response, chain, authenticationResult);
 		}
 		catch (InternalAuthenticationServiceException failed) {
 			this.logger.error("An internal error occurred while trying to authenticate the user.", failed);
+			// 处理认证失败事宜，主要做了三件事：①从SecurityContextHolder中清除数据；②清除Cookie等信息；③调用认证失败的回调方法。
 			unsuccessfulAuthentication(request, response, failed);
 		}
 		catch (AuthenticationException ex) {
