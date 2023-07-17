@@ -57,6 +57,9 @@ import org.springframework.web.accept.HeaderContentNegotiationStrategy;
  * @author Rob Winch
  * @since 3.2
  * @see FormLoginConfigurer
+ * @泛型 HttpSecurityBuilder&lt;B&gt;
+ * 		T extends AbstractAuthenticationFilterConfigurer&lt;B, T, F&gt;
+ * 		F extends AbstractAuthenticationProcessingFilter
  */
 public abstract class AbstractAuthenticationFilterConfigurer<B extends HttpSecurityBuilder<B>, T extends AbstractAuthenticationFilterConfigurer<B, T, F>, F extends AbstractAuthenticationProcessingFilter>
 		extends AbstractHttpConfigurer<T, B> {

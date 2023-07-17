@@ -49,6 +49,9 @@ import org.springframework.security.web.session.SessionManagementFilter;
 /**
  * @param <H>
  * @author Rob Winch
+ * @泛型 想要用作HttpSecurityBuilder接口的泛型参数H，此参数必须实现了HttpSecurityBuilder接口
+ * @作用 它的实现类，一定能通过SecurityBuilder&lt;DefaultSecurityFilterChain&gt;构建出DefaultSecurityFilterChain；
+ * 		并且能获取对SecurityBuilder&lt;DefaultSecurityFilterChain&gt;进行初始化和配置的SecurityConfigurer配置类
  */
 public interface HttpSecurityBuilder<H extends HttpSecurityBuilder<H>>
 		extends SecurityBuilder<DefaultSecurityFilterChain> {
@@ -57,6 +60,7 @@ public interface HttpSecurityBuilder<H extends HttpSecurityBuilder<H>>
 	 * Gets the {@link SecurityConfigurer} by its class name or <code>null</code> if not
 	 * found. Note that object hierarchies are not considered.
 	 * @param clazz the Class of the {@link SecurityConfigurer} to attempt to get.
+	 * @作用 获取SecurityConfigurer配置类，它能对SecurityBuilder&lt;DefaultSecurityFilterChain&gt;进行初始化和配置
 	 */
 	<C extends SecurityConfigurer<DefaultSecurityFilterChain, H>> C getConfigurer(Class<C> clazz);
 
