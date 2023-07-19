@@ -1,9 +1,11 @@
 package com.yidou.study.security.config;
+
 import com.yidou.study.security.handler.MyAuthenticationFailureHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.ObjectPostProcessor;
@@ -11,6 +13,10 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsPasswordService;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
@@ -18,13 +24,21 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+
 import java.util.ArrayList;
 import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 	@Autowired
 	private AuthenticationConfiguration authenticationConfiguration;
+
+	@Autowired
+	private UserDetailsServiceImpl userDetailsService;
+
+	@Autowired
+	private UserDetailsPasswordService userDetailsPasswordService;
 
     /*@Bean
     SecurityFilterChain filterChain2(HttpSecurity http) throws Exception {
@@ -74,12 +88,22 @@ public class SecurityConfig {
 
 	@Bean
 	SecurityFilterChain filterChain1(HttpSecurity http) throws Exception {
-		// 配置局部AuthenticationManager
-		AuthenticationManager localityAuthenticationManager = http.
-				getSharedObject(AuthenticationManagerBuilder.class)
-				.userDetailsService(localityUserDetailsService())
-				.and()
-				.build();
+		/*
+		   局部 AuthenticationManager：从头定义ProviderManager、AuthenticationProvider、UserDetailsService实例
+		   	  1. 多数据源：内存数据源、mysql数据源
+		*/
+		DaoAuthenticationProvider localProvider = new DaoAuthenticationProvider();
+		localProvider.setUserDetailsService(localityUserDetailsService());
+		DaoAuthenticationProvider localProvider2 = new DaoAuthenticationProvider();
+		localProvider2.setUserDetailsService(userDetailsService);
+		// 指定密码升级服务
+		localProvider2.setUserDetailsPasswordService(userDetailsPasswordService);
+		List<AuthenticationProvider> providers = new ArrayList<>(2);
+		providers.add(localProvider);
+		providers.add(localProvider2);
+		//指定 全局AuthenticationManager
+		ProviderManager localityAuthenticationManager = new ProviderManager(providers, authenticationConfiguration.getAuthenticationManager());
+
 		System.out.println("局部：" + localityAuthenticationManager);
 		System.out.println("全局：" + authenticationConfiguration.getAuthenticationManager());
 		http.apply(new LocalFilterDSL())
@@ -113,6 +137,7 @@ public class SecurityConfig {
 				.and()
 				.anonymous()
 				.and()
+				// AuthenticationManager
 				.authenticationManager(localityAuthenticationManager)
 				.logout()
 				.logoutRequestMatcher(new OrRequestMatcher(new AntPathRequestMatcher("/logout1")))
@@ -120,6 +145,15 @@ public class SecurityConfig {
 				.csrf().disable();
 		return http.build();
 	}
+
+	/**
+	 * 指定加密方式:
+	 * 	 1. 不指定时默认使用的DelegatingPasswordEncoder也是 BCrypt加密；当密码的前缀不是bcrypt时，则升级密码
+	 */
+//	@Bean
+//	PasswordEncoder passwordEncoder() {
+//		return new BCryptPasswordEncoder();
+//	}
 
     /* 错误示例： 无法使用这种方式配置AuthenticationManagerBuilder
          不推荐使用此方式配置全局AuthenticationManager，放开注释会报错
@@ -156,13 +190,12 @@ public class SecurityConfig {
 	}
 
 
-
 	/**
 	 * 全局AuthenticationMananger中定义的用户
 	 * 1. InMemoryUserDetailsManager是UserDetailsService的子类
 	 * 2. 返回值类型必须是 UserDetailsService 才能作为AuthenticationManager的数据源注入进去
 	 * 3. 使用自定义AuthenticationProvider时，从配置文件中删除UserDetailsService bean创建。否则会StackOverflowError
-	 *     也就是说，如果@Bean自定义了AuthenticationManager，那么 就不会再自动将UserDetailsService 注入AuthenticationManager，并且会报错
+	 * 也就是说，如果@Bean自定义了AuthenticationManager，那么 就不会再自动将UserDetailsService 注入AuthenticationManager，并且会报错
 	 */
 //  @Bean
 //  UserDetailsService globalUserDetailsService() {
