@@ -6,7 +6,7 @@ import org.springframework.security.web.DefaultSecurityFilterChain;
 public class MySecurityConfigurer implements SecurityConfigurer<DefaultSecurityFilterChain, MyHttpSecurityBuilder> {
 	@Override
 	public void init(MyHttpSecurityBuilder builder) throws Exception {
-		builder.getConfigurer()
+//		builder.getConfigurer()；
 	}
 
 	@Override

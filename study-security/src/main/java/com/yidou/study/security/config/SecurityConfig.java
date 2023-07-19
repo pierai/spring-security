@@ -1,58 +1,206 @@
 package com.yidou.study.security.config;
-
 import com.yidou.study.security.handler.MyAuthenticationFailureHandler;
-import com.yidou.study.security.handler.MyAuthenticationSuccessHandler;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.ObjectPostProcessor;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
-
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import java.util.ArrayList;
+import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+	@Autowired
+	private AuthenticationConfiguration authenticationConfiguration;
+
+    /*@Bean
+    SecurityFilterChain filterChain2(HttpSecurity http) throws Exception {
+       // 局部 AuthenticationManager的用户数据源
+       InMemoryUserDetailsManager localityUserDetailsService = new InMemoryUserDetailsManager();
+       localityUserDetailsService.createUser(
+             User.withUsername("lisi").password("{noop}123456")
+                   .roles("LOCAL")
+                   .build());
+       http.securityMatcher("/sfc2/**")
+             .authorizeRequests()
+             .anyRequest().authenticated()
+             //表单登录配置项
+             .and()
+             .formLogin()
+             .loginPage("/mylogin")    //自定义登录页的位置
+             .loginProcessingUrl("/sfc2/doLogin")    //登录接口地址
+//             .defaultSuccessUrl("/dsUrl")  //登录成功跳转页。指定了successHandler就不要再使用defaultSuccessUrl()方法了
+//           .failureUrl("/mylogin.html")   //登陆失败跳转页：前端重定向
+//           .successHandler(this.successHandler())
+             .failureHandler(new MyAuthenticationFailureHandler())
+//             .usernameParameter("uname")    //用户名参数名称
+//             .passwordParameter("passwd")   //密码参数名称
+             .withObjectPostProcessor(new ObjectPostProcessor<UsernamePasswordAuthenticationFilter>() {
+                @Override
+                public <O extends UsernamePasswordAuthenticationFilter> O postProcess(O object) {
+                   object.setUsernameParameter("username");
+                   object.setPasswordParameter("password");
+                   object.setAuthenticationSuccessHandler((request, response, authentication) -> {
+                      response.getWriter().write("sfc2 login success !!!");
+                   });
+                   return object;
+                }
+             })
+             .permitAll()
+             .and()
+             .anonymous()
+             .and()
+             .userDetailsService(localityUserDetailsService)
+             .logout()
+             .logoutRequestMatcher(new OrRequestMatcher(new AntPathRequestMatcher("/logout1")))
+             .and()
+             .csrf().disable();
+       return http.build();
+    }*/
+
+
 	@Bean
-	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-		http.authorizeRequests()
-				// 放行获取验证码接口
-				.requestMatchers("/vc.jpg").permitAll()
+	SecurityFilterChain filterChain1(HttpSecurity http) throws Exception {
+		// 配置局部AuthenticationManager
+		AuthenticationManager localityAuthenticationManager = http.
+				getSharedObject(AuthenticationManagerBuilder.class)
+				.userDetailsService(localityUserDetailsService())
+				.and()
+				.build();
+		System.out.println("局部：" + localityAuthenticationManager);
+		System.out.println("全局：" + authenticationConfiguration.getAuthenticationManager());
+		http.apply(new LocalFilterDSL())
+				.and()
+				.securityMatcher("/sfc1/**")
+				.authorizeRequests()
 				.anyRequest().authenticated()
 				//表单登录配置项
 				.and()
 				.formLogin()
-				// 指定登录页通过访问后台接口返回
-				.loginPage("/login")
-				//登录接口地址
-				.loginProcessingUrl("/doLogin")
-				.usernameParameter("uname")    //用户名参数名称
-				.passwordParameter("passwd")   //密码参数名称
-				//登录成功处理
-				.successHandler(new MyAuthenticationSuccessHandler())
-				//登录失败处理
+				.loginPage("/mylogin")    //自定义登录页的位置
+				.loginProcessingUrl("/sfc1/doLogin")    //登录接口地址
+//             .defaultSuccessUrl("/dsUrl")  //登录成功跳转页。指定了successHandler就不要再使用defaultSuccessUrl()方法了
+//           .failureUrl("/mylogin.html")   //登陆失败跳转页：前端重定向
+//           .successHandler(this.successHandler())
 				.failureHandler(new MyAuthenticationFailureHandler())
+//             .usernameParameter("uname")    //用户名参数名称
+//             .passwordParameter("passwd")   //密码参数名称
+				.withObjectPostProcessor(new ObjectPostProcessor<UsernamePasswordAuthenticationFilter>() {
+					@Override
+					public <O extends UsernamePasswordAuthenticationFilter> O postProcess(O object) {
+						object.setUsernameParameter("username");
+						object.setPasswordParameter("password");
+						object.setAuthenticationSuccessHandler((request, response, authentication) -> {
+							response.getWriter().write("sfc1 login success !!!");
+						});
+						return object;
+					}
+				})
 				.permitAll()
 				.and()
-				//注销
+				.anonymous()
+				.and()
+				.authenticationManager(localityAuthenticationManager)
 				.logout()
 				.logoutRequestMatcher(new OrRequestMatcher(new AntPathRequestMatcher("/logout1")))
 				.and()
-				// 配置 ProviderManager
-				.authenticationManager(authenticationManager())
 				.csrf().disable();
 		return http.build();
 	}
 
+    /* 错误示例： 无法使用这种方式配置AuthenticationManagerBuilder
+         不推荐使用此方式配置全局AuthenticationManager，放开注释会报错
+         即使没有@Bean定义全局AuthenticationManager，放开注释也会报错
+     */
+//    @Autowired
+//    public void authManager(AuthenticationManagerBuilder builder) throws Exception {
+//        System.out.println("默认全局=="+builder);
+//        builder.userDetailsService(globalUserDetailsService());
+//    }
+
 	/**
-	 * 配置登录成功事项：配置targetUrlParameter和defaultTargetUrl，并在HttpSecurity.successHandler(successHandler())中指定.
+	 * 获取过滤器链sfc1的局部AuthenticationManager
+	 1. 不建议将局部AuthenticationManager 通过@Bean定义，会和全局AuthenticationManager冲突
+	 */
+//  @Bean
+//  public AuthenticationManager localityAuthenticationManager(HttpSecurity http) throws Exception {
+//     return http.
+//           getSharedObject(AuthenticationManagerBuilder.class)
+//           .userDetailsService(localityUserDetailsService())
+//           .and()
+//           .build();
+//  }
+
+	/**
+	 * 自定义全局AuthenticationManager
+	 */
+	@Bean
+	public AuthenticationManager globalAuthenticationManager() throws Exception {
+		// 全局 AuthenticationManager
+		DaoAuthenticationProvider globalProvider = new DaoAuthenticationProvider();
+		globalProvider.setUserDetailsService(globalUserDetailsService());
+		return new ProviderManager(globalProvider);
+	}
+
+
+
+	/**
+	 * 全局AuthenticationMananger中定义的用户
+	 * 1. InMemoryUserDetailsManager是UserDetailsService的子类
+	 * 2. 返回值类型必须是 UserDetailsService 才能作为AuthenticationManager的数据源注入进去
+	 * 3. 使用自定义AuthenticationProvider时，从配置文件中删除UserDetailsService bean创建。否则会StackOverflowError
+	 *     也就是说，如果@Bean自定义了AuthenticationManager，那么 就不会再自动将UserDetailsService 注入AuthenticationManager，并且会报错
+	 */
+//  @Bean
+//  UserDetailsService globalUserDetailsService() {
+//     InMemoryUserDetailsManager globalUserDetailsService = new InMemoryUserDetailsManager();
+//     globalUserDetailsService.createUser(
+//           User.withUsername("wangwu").password("{noop}123456")
+//                 .roles("LOCAL")
+//                 .build());
+//     return globalUserDetailsService;
+//  }
+	@Bean
+	InMemoryUserDetailsManager globalUserDetailsService() {
+		InMemoryUserDetailsManager globalUserDetailsService = new InMemoryUserDetailsManager();
+		globalUserDetailsService.createUser(
+				User.withUsername("wangwu").password("{noop}123456")
+						.roles("LOCAL")
+						.build());
+		return globalUserDetailsService;
+	}
+
+	/**
+	 * 局部 AuthenticationManager的用户数据源：构造基于内存的数据源管理
+	 * 1. 返回值不能为UserDetailsService，否则将会被识别为 全局AuthenticationMananger中定义的用户
+	 */
+	@Bean
+	public InMemoryUserDetailsManager localityUserDetailsService() {
+		// 局部 AuthenticationManager的用户数据源
+		InMemoryUserDetailsManager localityUserDetailsService = new InMemoryUserDetailsManager();
+		localityUserDetailsService.createUser(
+				User.withUsername("zhaoliu").password("{noop}123456")
+						.roles("LOCAL")
+						.build());
+		return localityUserDetailsService;
+	}
+
+	/**
+	 * 登录成功后处理事项：
+	 * 配置targetUrlParameter和defaultTargetUrl，并在HttpSecurity.successHandler(successHandler())中指定.
 	 */
 	@Bean
 	SavedRequestAwareAuthenticationSuccessHandler successHandler() {
@@ -61,39 +209,4 @@ public class SecurityConfig {
 		authenticationSuccessHandler.setDefaultTargetUrl("/user");
 		return authenticationSuccessHandler;
 	}
-
-
-	/**
-	 * 配置ProviderManager
-	 */
-	@Bean
-	AuthenticationManager authenticationManager() {
-		//指定认证方式：DaoAuthenticationProvider表示用户名/密码认证
-		DaoAuthenticationProvider ap1 = new KaptchaAuthenticationProvider();
-		ap1.setUserDetailsService(uds1());
-		DaoAuthenticationProvider ap2 = new KaptchaAuthenticationProvider();
-		ap2.setUserDetailsService(uds2());
-		return new ProviderManager(ap1, ap2);
-	}
-
-	/**
-	 * 配置用户数据源1
-	 */
-	@Bean
-	UserDetailsService uds1() {
-		InMemoryUserDetailsManager userDetailService = new InMemoryUserDetailsManager();
-		userDetailService.createUser(User.withUsername("zhangsan").password("{noop}zhangsan").roles("admin").build());
-		return userDetailService;
-	}
-
-	/**
-	 * 配置用户数据源2
-	 */
-	@Bean
-	UserDetailsService uds2() {
-		InMemoryUserDetailsManager userDetailService = new InMemoryUserDetailsManager();
-		userDetailService.createUser(User.withUsername("lisi").password("{noop}lisi").roles("visitor").build());
-		return userDetailService;
-	}
 }
-
